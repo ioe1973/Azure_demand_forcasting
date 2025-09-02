@@ -1,4 +1,9 @@
 import React from 'react';
+import CPUTrendsChart from '../components/charts/CPUTrendsChart';
+import StorageChart from '../components/charts/StorageChart';
+import PieChart from '../components/charts/PieChart';
+// Remove this line: import ApiTest from '../components/ApiTest';
+import { cpuUsageData, storageData } from '../data/mockData';
 
 const UsageTrends = () => {
   return (
@@ -8,26 +13,31 @@ const UsageTrends = () => {
         <p>Monitor CPU, storage, and resource usage patterns across Azure regions</p>
       </div>
       
+      {/* Remove this line: <ApiTest /> */}
+      
       <div className="content-grid">
         <div className="content-card">
           <h4>CPU Usage by Region</h4>
-          <div className="placeholder-chart">
-            <p>📈 Line chart showing CPU trends will be here</p>
-          </div>
+          <CPUTrendsChart 
+            data={cpuUsageData} 
+            title="Monthly CPU Usage Trends by Region"
+          />
         </div>
         
         <div className="content-card">
           <h4>Storage Consumption</h4>
-          <div className="placeholder-chart">
-            <p>📊 Bar chart showing storage usage will be here</p>
-          </div>
+          <StorageChart 
+            data={storageData} 
+            title="Storage Usage by Type"
+          />
         </div>
         
         <div className="content-card">
-          <h4>Resource Utilization</h4>
-          <div className="placeholder-chart">
-            <p>🔄 Pie chart showing resource distribution will be here</p>
-          </div>
+          <h4>Resource Utilization Distribution</h4>
+          <PieChart 
+            data={storageData} 
+            title="Storage Distribution by Type"
+          />
         </div>
       </div>
     </div>
