@@ -1,12 +1,94 @@
-# React + Vite
+# Azure Demand Forecasting & Capacity Optimization (Frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + Vite dashboard for monitoring Azure resource usage, visualizing forecasts, and reviewing cost/optimization reports.
 
-Currently, two official plugins are available:
+## Tech Stack
+- React 18 + Vite
+- react-router-dom
+- chart.js + react-chartjs-2
+- CSS (modular component styles)
+- ESLint + Prettier (recommended)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
+- Dashboard layout with Header, Sidebar, and Main content
+- Routing (Usage Trends, Forecasts, Reports)
+- Mock visualizations with Chart.js
+- API service placeholders with loading/error states
+- Filters, tables (sorting/pagination/export), and responsive UI
 
-## Expanding the ESLint configuration
+## Project Structure (frontend/)
+```
+src/
+  components/
+    charts/                # Reusable chart components
+    filters/               # FilterPanel
+    data/                  # DataTable
+  data/                    # Mock chart/table data
+  hooks/                   # useApi hook
+  pages/                   # UsageTrends, Forecasts, Reports
+  services/                # api.js (placeholder API layer)
+  styles/                  # Global/additional styles (if any)
+  App.jsx
+  main.jsx
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Getting Started
+1) Prerequisites
+- Node.js 18+ and npm
+
+2) Install
+```bash
+npm install
+```
+
+3) Environment Variables (Vite requires VITE_ prefix)
+Create a `.env` file (or use `.env.local`) from `.env.example`:
+```
+VITE_API_URL=http://localhost:8000/api
+```
+Note: Step 4 uses mock data; real API not required yet.
+
+4) Run
+```bash
+npm run dev
+```
+Open the printed localhost URL.
+
+## Data Flow
+- Pages call functions from `src/services/api.js` (e.g., `getCPUUsageTrends`).
+- These functions currently return mock objects from `src/data/mockData.js` after a simulated delay.
+- When you introduce real data:
+  - Option A: Frontend-only — load and parse CSV (Papaparse/d3), store in state, feed into charts.
+  - Option B (recommended): Backend endpoint returns JSON; replace mock functions in `api.js` with `fetch` calls to `VITE_API_URL`.
+
+## Linting & Formatting (recommended)
+Install tools:
+```bash
+npm i -D eslint prettier eslint-plugin-react eslint-plugin-react-hooks eslint-plugin-import eslint-config-prettier
+```
+Then run:
+```bash
+npx eslint "src/**/*.{js,jsx}" --fix
+npx prettier "src/**/*.{js,jsx,css,md}" --write
+```
+
+## Scripts (optional to add in package.json)
+```json
+{
+  "scripts": {
+    "lint": "eslint \\"src/**/*.{js,jsx}\\"",
+    "lint:fix": "eslint \\"src/**/*.{js,jsx}\\" --fix",
+    "format": "prettier \\"src/**/*.{js,jsx,css,md}\\" --write"
+  }
+}
+```
+
+## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branch strategy, commit conventions, and PR process.
+
+## Code of Conduct
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+## Notes
+- Vite env vars must start with `VITE_`.
+- If you see `process is not defined`, replace `process.env` with `import.meta.env`.
