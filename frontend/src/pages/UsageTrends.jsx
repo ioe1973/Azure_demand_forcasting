@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import CPUTrendsChart from '../components/charts/CPUTrendsChart';
 import StorageChart from '../components/charts/StorageChart';
 import PieChart from '../components/charts/PieChart';
@@ -21,33 +21,53 @@ const UsageTrends = () => {
     resourceType: 'all'
   });
 
-  // Fetch real data from CSV via your backend API
+  // Create callback functions that include filters
+  const getUsageTrendsWithFilters = useCallback(() => getUsageTrends(filters), [filters]);
+  const getStorageByTypeWithFilters = useCallback(() => getStorageByType(filters), [filters]);
+  const getDailyAveragesWithFilters = useCallback(() => getDailyAverages(filters), [filters]);
+  const getRawDataWithFilters = useCallback(() => getRawData(filters), [filters]);
+
+  // Fetch real data from CSV via your backend API with filters
   const {
     data: usageTrendsData,
     loading: trendsLoading,
-    error: trendsError
-  } = useApiData(getUsageTrends);
+    error: trendsError,
+    refetch: refetchTrends
+  } = useApiData(getUsageTrendsWithFilters, [filters]);
 
   const {
     data: storageData,
     loading: storageLoading,
-    error: storageError
-  } = useApiData(getStorageByType);
+    error: storageError,
+    refetch: refetchStorage
+  } = useApiData(getStorageByTypeWithFilters, [filters]);
 
   const {
     data: dailyData,
     loading: dailyLoading,
-    error: dailyError
-  } = useApiData(getDailyAverages);
+    error: dailyError,
+    refetch: refetchDaily
+  } = useApiData(getDailyAveragesWithFilters, [filters]);
 
   const {
     data: rawTableData,
     loading: tableLoading,
-    error: tableError
-  } = useApiData(getRawData);
+    error: tableError,
+    refetch: refetchTable
+  } = useApiData(getRawDataWithFilters, [filters]);
 
-  const handleFilterChange = (updated) => setFilters(updated);
-  const handleApplyFilters = (applied) => setFilters(applied);
+  const handleFilterChange = (updated) => {
+    setFilters(updated);
+  };
+
+  const handleApplyFilters = (applied) => {
+    setFilters(applied);
+    // Trigger refetch of all data with new filters
+    refetchTrends();
+    refetchStorage();
+    refetchDaily();
+    refetchTable();
+  };
 
   return (
     <div className="page-content">
@@ -66,7 +86,7 @@ const UsageTrends = () => {
         <div className="content-card">
           <h4>CPU Usage Trends (Real Data)</h4>
           {trendsLoading ? (
-            <LoadingSpinner message="Loading real CPU usage data..." />
+            <LoadingSpinner message="Loading filtered CPU usage data..." />
           ) : trendsError ? (
             <p style={{ color: 'red' }}>Error loading real data: {trendsError}</p>
           ) : (
@@ -77,7 +97,7 @@ const UsageTrends = () => {
           )}
           {usageTrendsData && (
             <p style={{ marginTop: '0.5rem', color: '#6c757d', fontSize: '0.85rem' }}>
-              📊 Showing real data from CSV file
+              📊 Filtered data: {filters.region !== 'all' ? filters.region : 'All regions'} | {filters.timeRange} | {filters.resourceType !== 'all' ? filters.resourceType : 'All resources'}
             </p>
           )}
         </div>
@@ -85,7 +105,7 @@ const UsageTrends = () => {
         <div className="content-card">
           <h4>Storage Usage by Type (Real Data)</h4>
           {storageLoading ? (
-            <LoadingSpinner message="Loading real storage data..." />
+            <LoadingSpinner message="Loading filtered storage data..." />
           ) : storageError ? (
             <p style={{ color: 'red' }}>Error: {storageError}</p>
           ) : (
@@ -114,13 +134,13 @@ const UsageTrends = () => {
       <div style={{ marginTop: '1.5rem' }}>
         <h4>📋 Raw CSV Data Table</h4>
         {tableLoading ? (
-          <LoadingSpinner message="Loading table data..." />
+          <LoadingSpinner message="Loading filtered table data..." />
         ) : tableError ? (
           <p style={{ color: 'red' }}>Error loading table: {tableError}</p>
         ) : (
           <DataTable
             data={rawTableData ? rawTableData.slice(0, 50) : []} // Show first 50 rows
-            title={`Raw Data from CSV (${rawTableData ? rawTableData.length : 0} total records)`}
+            title={`Raw Data from CSV (${rawTableData ? rawTableData.length : 0} total filtered records)`}
           />
         )}
       </div>
