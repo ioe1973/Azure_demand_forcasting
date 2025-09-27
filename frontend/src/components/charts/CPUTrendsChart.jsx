@@ -28,7 +28,10 @@ const CPUTrendsChart = ({ data, title = "CPU Usage Trends" }) => {
   if (!data || !data.labels || !data.datasets) {
     return (
       <div style={{ height: '300px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#666' }}>No chart data available</p>
+        <p style={{ color: '#666', textAlign: 'center' }}>
+          📊 No chart data available<br />
+          <small>Loading real CSV data...</small>
+        </p>
       </div>
     );
   }

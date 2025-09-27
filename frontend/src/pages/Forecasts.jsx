@@ -8,21 +8,11 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useApiData } from '../hooks/useApiData';
 import {
   getUsageTrends,
-  getDailyAverages,
   getStorageByType,
+  getDailyAverages,
   getRawData
 } from '../services/apiService';
 import '../pages/Pages.css';
-
-const timeRangeToDays = (timeRange) => {
-  switch (timeRange) {
-    case '1M': return 7;
-    case '3M': return 14;
-    case '6M': return 21;
-    case '1Y':
-    default: return 30;
-  }
-};
 
 const Forecasts = () => {
   const [filters, setFilters] = useState({
@@ -31,9 +21,9 @@ const Forecasts = () => {
     resourceType: 'cpu'
   });
 
-  // Use real CSV data for forecasting
+  // Use real API data for forecasting page
   const {
-    data: usageTrendsData,
+    data: forecastData,
     loading: forecastLoading,
     error: forecastError
   } = useApiData(getUsageTrends);
@@ -59,29 +49,22 @@ const Forecasts = () => {
   const handleFilterChange = (updated) => setFilters(updated);
   const handleApplyFilters = (applied) => setFilters(applied);
 
-  // Create forecast data based on real historical data
-  const generateForecastData = (historicalData) => {
-    if (!historicalData || !historicalData.datasets) return null;
-    
-    // Simple forecast: extend the last trend
-    const forecastData = JSON.parse(JSON.stringify(historicalData));
-    forecastData.datasets = forecastData.datasets.map(dataset => ({
-      ...dataset,
-      label: `${dataset.label} (Forecast)`,
-      borderDash: [5, 5], // Dashed line for forecast
-      backgroundColor: `${dataset.borderColor}20`
-    }));
-    
-    return forecastData;
+  // Calculate forecast days based on time range
+  const getForecastDays = (timeRange) => {
+    switch (timeRange) {
+      case '1M': return 7;
+      case '3M': return 14;
+      case '6M': return 21;
+      case '1Y':
+      default: return 30;
+    }
   };
-
-  const forecastData = generateForecastData(usageTrendsData);
 
   return (
     <div className="page-content">
       <div className="page-header">
         <h3>🔮 Demand Forecasts (Real Data)</h3>
-        <p>AI-powered predictions based on historical CSV data for future resource demands</p>
+        <p>AI-powered predictions for future resource demands based on historical CSV data</p>
       </div>
 
       <FilterPanel
@@ -92,41 +75,46 @@ const Forecasts = () => {
 
       <div className="content-grid">
         <div className="content-card">
-          <h4>{timeRangeToDays(filters.timeRange)}-Day Demand Forecast</h4>
+          <h4>{getForecastDays(filters.timeRange)}-Day Demand Forecast (Real Data)</h4>
           {forecastLoading ? (
-            <LoadingSpinner message="Generating forecast from real data..." />
+            <LoadingSpinner message="Generating forecast from CSV data..." />
           ) : forecastError ? (
             <p style={{ color: 'red' }}>Error: {forecastError}</p>
           ) : forecastData ? (
             <CPUTrendsChart
               data={forecastData}
-              title={`${timeRangeToDays(filters.timeRange)}-Day CPU Forecast (Based on CSV Data)`}
+              title={`${getForecastDays(filters.timeRange)}-Day CPU Usage Forecast`}
             />
           ) : (
             <p>No forecast data available</p>
+          )}
+          {forecastData && (
+            <p style={{ marginTop: '0.5rem', color: '#6c757d', fontSize: '0.85rem' }}>
+              🔮 Forecast based on historical patterns from CSV data
+            </p>
           )}
         </div>
 
         <div className="content-card">
           <h4>Capacity Planning (Real Data)</h4>
           {capacityLoading ? (
-            <LoadingSpinner message="Loading capacity planning from CSV..." />
+            <LoadingSpinner message="Analyzing capacity from CSV data..." />
           ) : capacityError ? (
             <p style={{ color: 'red' }}>Error: {capacityError}</p>
           ) : capacityData ? (
             <StorageChart
               data={capacityData}
-              title="Current Capacity vs Usage (CSV Data)"
+              title="Storage Capacity vs Predicted Demand"
             />
           ) : (
             <p>No capacity data available</p>
           )}
           <div style={{ marginTop: '0.75rem', color: '#495057' }}>
-            <h5>📊 Recommendations based on real data:</h5>
+            <h5>📊 Capacity Recommendations:</h5>
             <ul>
-              <li>• Monitor peak usage periods from historical trends</li>
-              <li>• Scale resources based on observed growth patterns</li>
-              <li>• Consider seasonal variations in your data</li>
+              <li>• Based on {forecastTableData ? forecastTableData.length : 0} historical records</li>
+              <li>• Consider scaling resources during peak usage periods</li>
+              <li>• Monitor storage growth patterns for optimal allocation</li>
             </ul>
           </div>
         </div>
@@ -134,31 +122,31 @@ const Forecasts = () => {
         <div className="content-card">
           <h4>Daily Variation Analysis (Real Data)</h4>
           {weeklyLoading ? (
-            <LoadingSpinner message="Loading daily variation from CSV..." />
+            <LoadingSpinner message="Analyzing daily patterns..." />
           ) : weeklyError ? (
             <p style={{ color: 'red' }}>Error: {weeklyError}</p>
-          ) : weeklyData && (
+          ) : weeklyData ? (
             <DemandChart
               data={weeklyData}
-              title="Daily Resource Demand (CSV Data)"
+              title="Daily Usage Variation from CSV"
             />
+          ) : (
+            <p>No daily variation data available</p>
           )}
         </div>
       </div>
 
       <div style={{ marginTop: '1.5rem' }}>
-        <h4>📋 Forecast Data Summary (CSV Records)</h4>
+        <h4>📋 Forecast Summary Table (Real Data)</h4>
         {tableLoading ? (
           <LoadingSpinner message="Loading forecast summary..." />
         ) : tableError ? (
-          <p style={{ color: 'red' }}>Error: {tableError}</p>
-        ) : forecastTableData ? (
-          <DataTable
-            data={forecastTableData.slice(0, 20)} // Show first 20 records
-            title={`7-Day Forecast Summary (${forecastTableData.length} total records from CSV)`}
-          />
+          <p style={{ color: 'red' }}>Error loading table: {tableError}</p>
         ) : (
-          <p>No table data available</p>
+          <DataTable
+            data={forecastTableData ? forecastTableData.slice(0, 20) : []}
+            title={`7-Day Forecast Summary (${forecastTableData ? forecastTableData.length : 0} total records)`}
+          />
         )}
       </div>
     </div>

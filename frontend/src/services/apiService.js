@@ -15,13 +15,21 @@ const fetchFromAPI = async (endpoint) => {
   }
 };
 
-// Transform raw data into chart format
-// Improved transform function for your specific CSV data
+// Improved transform function with better null handling
 const transformToChartData = (rawData, config) => {
   const { labelField, dataField, groupByField } = config;
   
+  // Handle null or empty data
   if (!rawData || rawData.length === 0) {
-    return { labels: [], datasets: [] };
+    return { 
+      labels: ['No Data'], 
+      datasets: [{
+        label: 'No Data Available',
+        data: [0],
+        backgroundColor: '#cccccc',
+        borderColor: '#999999'
+      }]
+    };
   }
 
   if (groupByField) {
@@ -36,11 +44,10 @@ const transformToChartData = (rawData, config) => {
     // Get unique labels (e.g., dates)
     const labels = [...new Set(rawData.map(item => {
       const label = item[labelField];
-      // Format dates nicely if it's a date field
       if (labelField === 'date' && label) {
         return new Date(label).toLocaleDateString();
       }
-      return label;
+      return label || 'Unknown';
     }))].sort();
 
     // Create datasets for each group
@@ -48,7 +55,6 @@ const transformToChartData = (rawData, config) => {
     const datasets = Object.keys(grouped).map((group, index) => {
       const color = colors[index % colors.length];
       
-      // Create data array matching the labels
       const data = labels.map(label => {
         const matchingItem = grouped[group].find(item => {
           const itemLabel = labelField === 'date' && item[labelField] 
@@ -72,7 +78,7 @@ const transformToChartData = (rawData, config) => {
     return { labels, datasets };
   } else {
     // Simple chart data (for pie charts, bar charts)
-    const labels = rawData.map(item => item[labelField]);
+    const labels = rawData.map(item => item[labelField] || 'Unknown');
     const data = rawData.map(item => parseFloat(item[dataField]) || 0);
     
     return {
@@ -91,66 +97,108 @@ const transformToChartData = (rawData, config) => {
   }
 };
 
-// API service functions
+// API service functions with better error handling
 export const apiService = {
   // Fetch usage trends data
   async getUsageTrends() {
-    const rawData = await fetchFromAPI('/usage-trends');
-    return transformToChartData(rawData, {
-      labelField: 'date',
-      dataField: 'usage_cpu', // Make sure this matches your CSV column
-      groupByField: 'region'
-    });
+    try {
+      const rawData = await fetchFromAPI('/usage-trends');
+      return transformToChartData(rawData, {
+        labelField: 'date',
+        dataField: 'usage_cpu',
+        groupByField: 'region'
+      });
+    } catch (error) {
+      return { labels: ['No Data'], datasets: [{ label: 'No Data Available', data: [0], backgroundColor: '#cccccc', borderColor: '#999999' }] };
+    }
   },
 
   // Fetch top regions data
   async getTopRegions() {
-    const rawData = await fetchFromAPI('/top-regions');
-    return transformToChartData(rawData, {
-      labelField: 'region',
-      dataField: 'total_usage'
-    });
+    try {
+      const rawData = await fetchFromAPI('/top-regions');
+      return transformToChartData(rawData, {
+        labelField: 'region',
+        dataField: 'total_cpu_usage'
+      });
+    } catch (error) {
+      return { labels: ['No Data'], datasets: [{ label: 'No Data Available', data: [0], backgroundColor: '#cccccc', borderColor: '#999999' }] };
+    }
   },
 
-  // Fetch storage by type data  
+  // Fetch storage by type data
   async getStorageByType() {
-    const rawData = await fetchFromAPI('/storage-by-type');
-    return transformToChartData(rawData, {
-      labelField: 'resource_type', // Use the correct field name
-      dataField: 'total_storage'   // Use the correct field name
-    });
+    try {
+      const rawData = await fetchFromAPI('/storage-by-type');
+      return transformToChartData(rawData, {
+        labelField: 'resource_type',
+        dataField: 'total_storage'
+      });
+    } catch (error) {
+      return { labels: ['No Data'], datasets: [{ label: 'No Data Available', data: [0], backgroundColor: '#cccccc', borderColor: '#999999' }] };
+    }
   },
 
   // Fetch daily averages
   async getDailyAverages() {
-    const rawData = await fetchFromAPI('/daily-averages');
-    return transformToChartData(rawData, {
-      labelField: 'date',
-      dataField: 'avg_cpu_usage',
-      groupByField: 'region'
-    });
+    try {
+      const rawData = await fetchFromAPI('/daily-averages');
+      return transformToChartData(rawData, {
+        labelField: 'date',
+        dataField: 'usage_cpu',
+        groupByField: 'region'
+      });
+    } catch (error) {
+      return { labels: ['No Data'], datasets: [{ label: 'No Data Available', data: [0], backgroundColor: '#cccccc', borderColor: '#999999' }] };
+    }
   },
 
   // Fetch raw data for tables
   async getRawData() {
-    return await fetchFromAPI('/raw-data');
+    try {
+      return await fetchFromAPI('/raw-data');
+    } catch (error) {
+      return [];
+    }
   },
 
-  // Generic function to fetch and transform any endpoint
-  async getChartData(endpoint, config) {
-    const rawData = await fetchFromAPI(endpoint);
-    return transformToChartData(rawData, config);
+  // Cost analysis data
+  async getCostAnalysis() {
+    try {
+      const rawData = await fetchFromAPI('/cost-analysis');
+      return transformToChartData(rawData, {
+        labelField: 'resource_type',
+        dataField: 'estimated_cost'
+      });
+    } catch (error) {
+      return { labels: ['No Data'], datasets: [{ label: 'No Data Available', data: [0], backgroundColor: '#cccccc', borderColor: '#999999' }] };
+    }
+  },
+
+  // Performance metrics
+  async getPerformanceMetrics() {
+    try {
+      const rawData = await fetchFromAPI('/performance-metrics'); 
+      return transformToChartData(rawData, {
+        labelField: 'region',
+        dataField: 'usage_cpu',
+        groupByField: 'resource_type'
+      });
+    } catch (error) {
+      return { labels: ['No Data'], datasets: [{ label: 'No Data Available', data: [0], backgroundColor: '#cccccc', borderColor: '#999999' }] };
+    }
   }
 };
 
-// Export individual functions for backwards compatibility
+// Export individual functions
 export const {
   getUsageTrends,
   getTopRegions,
   getStorageByType,
   getDailyAverages,
   getRawData,
-  getChartData
+  getCostAnalysis,
+  getPerformanceMetrics
 } = apiService;
 
 export default apiService;

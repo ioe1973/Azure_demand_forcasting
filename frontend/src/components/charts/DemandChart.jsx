@@ -20,6 +20,18 @@ ChartJS.register(
 );
 
 const DemandChart = ({ data, title = "Demand Variation" }) => {
+  // Safety check for null/undefined data
+  if (!data || !data.labels || !data.datasets) {
+    return (
+      <div style={{ height: '300px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#666', textAlign: 'center' }}>
+          📊 No demand data available<br />
+          <small>Loading real CSV data...</small>
+        </p>
+      </div>
+    );
+  }
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,

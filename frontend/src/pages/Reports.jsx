@@ -5,25 +5,14 @@ import DemandChart from '../components/charts/DemandChart';
 import FilterPanel from '../components/filters/FilterPanel';
 import DataTable from '../components/data/DataTable';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { useApiData, useMultipleApiData } from '../hooks/useApiData';
+import { useApiData } from '../hooks/useApiData';
 import {
   getUsageTrends,
   getStorageByType,
   getDailyAverages,
-  getTopRegions,
   getRawData
 } from '../services/apiService';
 import '../pages/Pages.css';
-
-const timeRangeToReportPeriod = (timeRange) => {
-  switch (timeRange) {
-    case '1M': return 'Monthly';
-    case '3M': return 'Quarterly';
-    case '6M': return 'Bi-annual';
-    case '1Y':
-    default: return 'Annual';
-  }
-};
 
 const Reports = () => {
   const [filters, setFilters] = useState({
@@ -32,14 +21,24 @@ const Reports = () => {
     resourceType: 'all'
   });
 
-  // Fetch multiple datasets for comprehensive reporting
-  const { data: reportData, loading, error } = useMultipleApiData({
-    storageData: getStorageByType,
-    usageTrends: getUsageTrends,
-    dailyAverages: getDailyAverages,
-    topRegions: getTopRegions,
-    rawData: getRawData
-  });
+  // Use real API data for reports
+  const {
+    data: costData,
+    loading: costLoading,
+    error: costError
+  } = useApiData(getStorageByType);
+
+  const {
+    data: performanceData,
+    loading: perfLoading,
+    error: perfError
+  } = useApiData(getUsageTrends);
+
+  const {
+    data: trendData,
+    loading: trendLoading,
+    error: trendError
+  } = useApiData(getDailyAverages);
 
   const {
     data: optimizationTableData,
@@ -50,29 +49,29 @@ const Reports = () => {
   const handleFilterChange = (updated) => setFilters(updated);
   const handleApplyFilters = (applied) => setFilters(applied);
 
-  // Calculate cost analysis from real data
-  const calculateCostAnalysis = () => {
-    if (!reportData.rawData) return null;
+  // Calculate cost summary from real data
+  const getCostSummary = () => {
+    if (!optimizationTableData || optimizationTableData.length === 0) return null;
     
-    const rawData = reportData.rawData;
-    const totalUsage = rawData.reduce((sum, record) => sum + (record.usage_cpu || 0), 0);
-    const avgUsage = totalUsage / rawData.length;
+    const totalRecords = optimizationTableData.length;
+    const avgCPU = optimizationTableData.reduce((sum, record) => sum + (record.usage_cpu || 0), 0) / totalRecords;
+    const avgStorage = optimizationTableData.reduce((sum, record) => sum + (record.usage_storage || 0), 0) / totalRecords;
     
     return {
-      totalCost: `$${(totalUsage * 0.1).toLocaleString()}`, // Example: $0.1 per CPU unit
-      trend: avgUsage > 50 ? "Increasing" : "Stable",
-      topCostDriver: "CPU Usage",
-      totalRecords: rawData.length
+      totalRecords,
+      avgCPU: avgCPU.toFixed(2),
+      avgStorage: avgStorage.toFixed(2),
+      topRegion: optimizationTableData[0]?.region || 'N/A'
     };
   };
 
-  const costSummary = calculateCostAnalysis();
+  const costSummary = getCostSummary();
 
   return (
     <div className="page-content">
       <div className="page-header">
-        <h3>📋 Reports & Analytics (Real CSV Data)</h3>
-        <p>Comprehensive reports and data analysis based on your Azure usage data</p>
+        <h3>📋 Reports & Analytics (Real Data)</h3>
+        <p>Comprehensive reports and data analysis from your CSV data for capacity optimization</p>
       </div>
 
       <FilterPanel
@@ -83,39 +82,39 @@ const Reports = () => {
 
       <div className="content-grid">
         <div className="content-card">
-          <h4>Cost Breakdown (Real Data)</h4>
-          {loading ? (
-            <LoadingSpinner message="Loading cost analysis from CSV..." />
-          ) : error ? (
-            <p style={{ color: 'red' }}>Error: {error}</p>
-          ) : reportData.storageData ? (
+          <h4>Resource Cost Breakdown (Real Data)</h4>
+          {costLoading ? (
+            <LoadingSpinner message="Analyzing costs from CSV data..." />
+          ) : costError ? (
+            <p style={{ color: 'red' }}>Error: {costError}</p>
+          ) : costData ? (
             <StorageChart
-              data={reportData.storageData}
-              title={`Cost Analysis (${timeRangeToReportPeriod(filters.timeRange)})`}
+              data={costData}
+              title="Resource Cost Analysis from CSV"
             />
           ) : (
             <p>No cost data available</p>
           )}
           {costSummary && (
             <div style={{ marginTop: '0.75rem', color: '#495057' }}>
-              <p><strong>Estimated Total Cost:</strong> {costSummary.totalCost}</p>
-              <p><strong>Usage Trend:</strong> {costSummary.trend}</p>
-              <p><strong>Top Cost Driver:</strong> {costSummary.topCostDriver}</p>
-              <p><strong>Data Points:</strong> {costSummary.totalRecords} CSV records</p>
+              <p><strong>Total Records Analyzed:</strong> {costSummary.totalRecords}</p>
+              <p><strong>Average CPU Usage:</strong> {costSummary.avgCPU}%</p>
+              <p><strong>Average Storage Usage:</strong> {costSummary.avgStorage} GB</p>
+              <p><strong>Top Region:</strong> {costSummary.topRegion}</p>
             </div>
           )}
         </div>
 
         <div className="content-card">
-          <h4>Resource Distribution (Real Data)</h4>
-          {loading ? (
-            <LoadingSpinner message="Loading distribution from CSV..." />
-          ) : error ? (
-            <p style={{ color: 'red' }}>Error: {error}</p>
-          ) : reportData.storageData ? (
+          <h4>Service Cost Distribution (Real Data)</h4>
+          {costLoading ? (
+            <LoadingSpinner message="Loading distribution..." />
+          ) : costError ? (
+            <p style={{ color: 'red' }}>Error: {costError}</p>
+          ) : costData ? (
             <PieChart
-              data={reportData.storageData}
-              title="Resource Distribution by Type (CSV Data)"
+              data={costData}
+              title="Cost Distribution by Resource Type"
             />
           ) : (
             <p>No distribution data available</p>
@@ -124,46 +123,46 @@ const Reports = () => {
 
         <div className="content-card">
           <h4>Performance Trends (Real Data)</h4>
-          {loading ? (
-            <LoadingSpinner message="Loading performance trends from CSV..." />
-          ) : error ? (
-            <p style={{ color: 'red' }}>Error: {error}</p>
-          ) : reportData.dailyAverages ? (
+          {trendLoading ? (
+            <LoadingSpinner message="Loading performance trends..." />
+          ) : trendError ? (
+            <p style={{ color: 'red' }}>Error: {trendError}</p>
+          ) : trendData ? (
             <DemandChart
-              data={reportData.dailyAverages}
-              title="Daily Performance Metrics (CSV Data)"
+              data={trendData}
+              title="Daily Performance Metrics from CSV"
             />
           ) : (
-            <p>No performance data available</p>
+            <p>No performance trends available</p>
           )}
-          {reportData.rawData && (
-            <div style={{ marginTop: '0.75rem', color: '#495057' }}>
-              <h5>📊 Performance Insights from CSV Data:</h5>
-              <ul>
-                <li>Performance Score: Based on {reportData.rawData.length} data points</li>
-                <li>Efficiency: Calculated from real usage patterns</li>
-                <li>• Optimize resources during low-usage periods</li>
-                <li>• Scale up during peak demand windows</li>
-                <li>• Monitor regional performance variations</li>
-              </ul>
-            </div>
-          )}
+          {perfLoading ? (
+            <LoadingSpinner message="Building performance report..." />
+          ) : perfError ? (
+            <p style={{ color: 'red' }}>Performance Error: {perfError}</p>
+          ) : costSummary ? (
+            <ul style={{ marginTop: '0.75rem', color: '#495057' }}>
+              <li><strong>Performance Score:</strong> {((costSummary.avgCPU / 100) * 85).toFixed(1)}%</li>
+              <li><strong>Efficiency:</strong> {costSummary.avgCPU > 70 ? 'High' : 'Moderate'}</li>
+              <li><strong>Recommendations:</strong></li>
+              <li>• Optimize resource allocation based on usage patterns</li>
+              <li>• Consider load balancing across regions</li>
+              <li>• Monitor storage growth trends</li>
+            </ul>
+          ) : null}
         </div>
       </div>
 
       <div style={{ marginTop: '1.5rem' }}>
-        <h4>📊 Optimization Opportunities (CSV Analysis)</h4>
+        <h4>📊 Optimization Opportunities (Real Data)</h4>
         {tableLoading ? (
           <LoadingSpinner message="Analyzing optimization opportunities..." />
         ) : tableError ? (
-          <p style={{ color: 'red' }}>Error: {tableError}</p>
-        ) : optimizationTableData ? (
-          <DataTable
-            data={optimizationTableData.slice(0, 30)} // Show first 30 records
-            title={`Optimization Analysis (${optimizationTableData.length} total CSV records)`}
-          />
+          <p style={{ color: 'red' }}>Error loading optimization data: {tableError}</p>
         ) : (
-          <p>No optimization data available</p>
+          <DataTable
+            data={optimizationTableData ? optimizationTableData.slice(0, 30) : []}
+            title={`Optimization Analysis (${optimizationTableData ? optimizationTableData.length : 0} records analyzed)`}
+          />
         )}
       </div>
     </div>

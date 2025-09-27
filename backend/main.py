@@ -88,21 +88,29 @@ def forecast_data():
 
 @app.get("/api/cost-analysis")
 def cost_analysis():
-    # Calculate estimated costs based on mean usage per resource type
-    cost_multipliers = {'VM': 0.12, 'Storage': 0.08, 'Container': 0.15}
-    cost_data = (
-        df.groupby('resource_type')
-        .agg({'usage_cpu': 'mean', 'usage_storage': 'mean'})
-        .reset_index()
+    # Cost analysis based on resource types and usage
+    cost_analysis = (
+        df.groupby('resource_type').agg({
+            'usage_cpu': 'mean',
+            'usage_storage': 'sum',
+            'users_active': 'mean'
+        }).reset_index()
     )
-    # Calculate estimated monthly cost for each resource type
-    cost_data['estimated_monthly_cost'] = cost_data.apply(
-        lambda row: (row['usage_cpu'] + row['usage_storage']) * cost_multipliers.get(row['resource_type'], 0.10),
-        axis=1
+    # Add estimated cost calculation
+    cost_analysis['estimated_cost'] = cost_analysis['usage_storage'] * 0.10  # $0.10 per GB
+    return cost_analysis.to_dict(orient='records')
+
+@app.get("/api/performance-metrics")
+def performance_metrics():
+    # Performance metrics by region and resource type
+    performance = (
+        df.groupby(['region', 'resource_type']).agg({
+            'usage_cpu': 'mean',
+            'usage_storage': 'mean',
+            'users_active': 'mean'
+        }).reset_index()
     )
-    # Round for readability
-    cost_data['estimated_monthly_cost'] = cost_data['estimated_monthly_cost'].round(2)
-    return cost_data.to_dict(orient='records')
+    return performance.to_dict(orient='records')
 
 # Optional: Root endpoint
 @app.get("/")
