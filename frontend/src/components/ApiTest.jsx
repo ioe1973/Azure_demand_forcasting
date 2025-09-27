@@ -1,46 +1,74 @@
-import React from 'react';
-import { useApi } from '../hooks/useApi';
-import { getCPUUsageTrends, apiHealthCheck } from '../services/api';
-import LoadingSpinner from './LoadingSpinner';
+import React, { useEffect, useState } from 'react';
+import { useApiData } from '../hooks/useApiData';
+import { getUsageTrends, getRawData } from '../services/apiService';
 
 const ApiTest = () => {
-  const { data: healthData, loading: healthLoading } = useApi(apiHealthCheck);
-  const { data: cpuData, loading: cpuLoading, error, refetch } = useApi(
-    () => getCPUUsageTrends('6M', ['East US', 'West US'])
-  );
+  const [testResults, setTestResults] = useState({});
+
+  // Test usage trends API
+  const { data: trendsData, loading: trendsLoading, error: trendsError } = useApiData(getUsageTrends);
+
+  // Test raw data API
+  const { data: rawData, loading: rawLoading, error: rawError } = useApiData(getRawData);
+
+  useEffect(() => {
+    setTestResults({
+      trendsTest: {
+        loading: trendsLoading,
+        error: trendsError,
+        hasData: !!trendsData,
+        dataPreview: trendsData ? JSON.stringify(trendsData, null, 2).substring(0, 200) + '...' : null
+      },
+      rawTest: {
+        loading: rawLoading,
+        error: rawError,
+        hasData: !!rawData,
+        dataCount: Array.isArray(rawData) ? rawData.length : 0
+      }
+    });
+  }, [trendsData, trendsLoading, trendsError, rawData, rawLoading, rawError]);
 
   return (
-    <div style={{ padding: '1rem', border: '1px solid #ddd', margin: '1rem', borderRadius: '8px' }}>
-      <h4>🧪 API Service Test</h4>
+    <div style={{ padding: '20px', fontFamily: 'monospace' }}>
+      <h2>🧪 API Connection Test</h2>
       
-      <div style={{ marginBottom: '1rem' }}>
-        <strong>Health Check:</strong>
-        {healthLoading ? (
-          <span> Loading...</span>
-        ) : (
-          <span style={{ color: 'green' }}> ✅ {healthData?.status}</span>
+      <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '5px' }}>
+        <h3>📊 Usage Trends API Test</h3>
+        <p><strong>Loading:</strong> {testResults.trendsTest?.loading ? '⏳ Yes' : '✅ No'}</p>
+        <p><strong>Error:</strong> {testResults.trendsTest?.error || '✅ None'}</p>
+        <p><strong>Has Data:</strong> {testResults.trendsTest?.hasData ? '✅ Yes' : '❌ No'}</p>
+        {testResults.trendsTest?.dataPreview && (
+          <details>
+            <summary>📋 Data Preview</summary>
+            <pre style={{ background: '#f5f5f5', padding: '10px', fontSize: '12px' }}>
+              {testResults.trendsTest.dataPreview}
+            </pre>
+          </details>
         )}
       </div>
 
-      <div style={{ marginBottom: '1rem' }}>
-        <strong>CPU Data:</strong>
-        {cpuLoading ? (
-          <LoadingSpinner message="Fetching CPU trends..." />
-        ) : error ? (
-          <span style={{ color: 'red' }}> ❌ {error}</span>
-        ) : (
-          <span style={{ color: 'green' }}> ✅ Data loaded successfully</span>
-        )}
+      <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '5px' }}>
+        <h3>📋 Raw Data API Test</h3>
+        <p><strong>Loading:</strong> {testResults.rawTest?.loading ? '⏳ Yes' : '✅ No'}</p>
+        <p><strong>Error:</strong> {testResults.rawTest?.error || '✅ None'}</p>
+        <p><strong>Has Data:</strong> {testResults.rawTest?.hasData ? '✅ Yes' : '❌ No'}</p>
+        <p><strong>Record Count:</strong> {testResults.rawTest?.dataCount || 0}</p>
       </div>
 
-      <button onClick={refetch} style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>
-        🔄 Refetch Data
-      </button>
-      
-      {cpuData && (
-        <pre style={{ fontSize: '0.8rem', background: '#f5f5f5', padding: '1rem', marginTop: '1rem' }}>
-          {JSON.stringify(cpuData.metadata, null, 2)}
-        </pre>
+      {(testResults.trendsTest?.hasData && testResults.rawTest?.hasData) && (
+        <div style={{ padding: '15px', background: '#d4edda', border: '1px solid #c3e6cb', borderRadius: '5px', color: '#155724' }}>
+          <h3>🎉 SUCCESS!</h3>
+          <p>Your backend API is working correctly and serving real CSV data!</p>
+          <p>You can now proceed to update your dashboard components.</p>
+        </div>
+      )}
+
+      {(testResults.trendsTest?.error || testResults.rawTest?.error) && (
+        <div style={{ padding: '15px', background: '#f8d7da', border: '1px solid #f5c6cb', borderRadius: '5px', color: '#721c24' }}>
+          <h3>❌ API Connection Issues</h3>
+          <p>Make sure your backend server is running on http://localhost:8000</p>
+          <p>Check the browser console for detailed error messages.</p>
+        </div>
       )}
     </div>
   );

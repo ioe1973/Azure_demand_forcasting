@@ -7,7 +7,7 @@ app = FastAPI(title="Azure Demand Forecasting API")
 # Add CORS middleware to allow frontend to access the API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite dev server port
+    allow_origins=["*"],  # Allow all origins (for development only)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

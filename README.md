@@ -2,6 +2,7 @@
 
 1. **Install dependencies:**
     ```bash
+    pip install --upgrade pip
     pip install fastapi uvicorn pandas
     ```
 

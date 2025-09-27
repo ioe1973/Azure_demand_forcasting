@@ -6,6 +6,7 @@ import MainContent from './components/MainContent';
 import UsageTrends from './pages/UsageTrends';
 import Forecasts from './pages/Forecasts';
 import Reports from './pages/Reports';
+import ApiTest from './components/ApiTest';
 import './App.css';
 import './pages/Pages.css';
 
@@ -22,6 +23,7 @@ function App() {
               <Route path="/usage-trends" element={<UsageTrends />} />
               <Route path="/forecasts" element={<Forecasts />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/api-test" element={<ApiTest />} />
             </Routes>
           </MainContent>
         </div>
