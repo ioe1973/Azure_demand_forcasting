@@ -24,6 +24,15 @@ ChartJS.register(
 );
 
 const CPUTrendsChart = ({ data, title = "CPU Usage Trends" }) => {
+  // Safety check for null/undefined data
+  if (!data || !data.labels || !data.datasets) {
+    return (
+      <div style={{ height: '300px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#666' }}>No chart data available</p>
+      </div>
+    );
+  }
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,

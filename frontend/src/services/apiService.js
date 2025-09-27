@@ -16,9 +16,14 @@ const fetchFromAPI = async (endpoint) => {
 };
 
 // Transform raw data into chart format
+// Improved transform function for your specific CSV data
 const transformToChartData = (rawData, config) => {
   const { labelField, dataField, groupByField } = config;
   
+  if (!rawData || rawData.length === 0) {
+    return { labels: [], datasets: [] };
+  }
+
   if (groupByField) {
     // Group data by specified field (e.g., region)
     const grouped = rawData.reduce((acc, item) => {
@@ -28,32 +33,57 @@ const transformToChartData = (rawData, config) => {
       return acc;
     }, {});
 
+    // Get unique labels (e.g., dates)
+    const labels = [...new Set(rawData.map(item => {
+      const label = item[labelField];
+      // Format dates nicely if it's a date field
+      if (labelField === 'date' && label) {
+        return new Date(label).toLocaleDateString();
+      }
+      return label;
+    }))].sort();
+
     // Create datasets for each group
+    const colors = ['#0078d4', '#107c10', '#d83b01', '#5c2d91', '#008272'];
     const datasets = Object.keys(grouped).map((group, index) => {
-      const colors = ['#0078d4', '#107c10', '#d83b01', '#5c2d91', '#008272'];
       const color = colors[index % colors.length];
       
+      // Create data array matching the labels
+      const data = labels.map(label => {
+        const matchingItem = grouped[group].find(item => {
+          const itemLabel = labelField === 'date' && item[labelField] 
+            ? new Date(item[labelField]).toLocaleDateString()
+            : item[labelField];
+          return itemLabel === label;
+        });
+        return matchingItem ? parseFloat(matchingItem[dataField]) || 0 : 0;
+      });
+
       return {
         label: group,
-        data: grouped[group].map(item => item[dataField]),
+        data: data,
         borderColor: color,
         backgroundColor: `${color}20`,
-        tension: 0.4
+        tension: 0.4,
+        fill: false
       };
     });
 
-    return {
-      labels: [...new Set(rawData.map(item => item[labelField]))],
-      datasets
-    };
+    return { labels, datasets };
   } else {
-    // Simple chart data
+    // Simple chart data (for pie charts, bar charts)
+    const labels = rawData.map(item => item[labelField]);
+    const data = rawData.map(item => parseFloat(item[dataField]) || 0);
+    
     return {
-      labels: rawData.map(item => item[labelField]),
+      labels: labels,
       datasets: [{
         label: 'Usage',
-        data: rawData.map(item => item[dataField]),
-        backgroundColor: ['#0078d4', '#107c10', '#d83b01', '#5c2d91', '#008272'],
+        data: data,
+        backgroundColor: [
+          '#0078d4', '#107c10', '#d83b01', '#5c2d91', '#008272',
+          '#6264a7', '#8764b8', '#744da9', '#b146c2', '#881798'
+        ],
         borderWidth: 2,
         borderColor: '#ffffff'
       }]
@@ -68,7 +98,7 @@ export const apiService = {
     const rawData = await fetchFromAPI('/usage-trends');
     return transformToChartData(rawData, {
       labelField: 'date',
-      dataField: 'cpu_usage',
+      dataField: 'usage_cpu', // Make sure this matches your CSV column
       groupByField: 'region'
     });
   },
@@ -82,12 +112,12 @@ export const apiService = {
     });
   },
 
-  // Fetch storage by type data
+  // Fetch storage by type data  
   async getStorageByType() {
     const rawData = await fetchFromAPI('/storage-by-type');
     return transformToChartData(rawData, {
-      labelField: 'storage_type',
-      dataField: 'usage_tb'
+      labelField: 'resource_type', // Use the correct field name
+      dataField: 'total_storage'   // Use the correct field name
     });
   },
 

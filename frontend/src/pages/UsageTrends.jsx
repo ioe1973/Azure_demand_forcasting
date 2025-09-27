@@ -5,33 +5,14 @@ import PieChart from '../components/charts/PieChart';
 import FilterPanel from '../components/filters/FilterPanel';
 import DataTable from '../components/data/DataTable';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { useApi } from '../hooks/useApi';
+import { useApiData } from '../hooks/useApiData';
 import {
-  getCPUUsageTrends,
-  getStorageUsage,
-  getDemandVariation
-} from '../services/api';
-import { usageReportData } from '../data/tableData';
+  getUsageTrends,
+  getStorageByType,
+  getDailyAverages,
+  getRawData
+} from '../services/apiService';
 import '../pages/Pages.css';
-
-const regionLabelToApi = (value) => {
-  switch (value) {
-    case 'east-us': return ['East US'];
-    case 'west-us': return ['West US'];
-    case 'central-us': return ['Central US'];
-    case 'north-europe': return ['North Europe'];
-    case 'southeast-asia': return ['Southeast Asia'];
-    case 'all':
-    default:
-      return []; // API treats empty array as "all"
-  }
-};
-
-const timeRangeToPeriod = (timeRange) => {
-  // For demand variation
-  if (timeRange === '1M' || timeRange === '3M') return 'weekly';
-  return 'monthly';
-};
 
 const UsageTrends = () => {
   const [filters, setFilters] = useState({
@@ -40,33 +21,30 @@ const UsageTrends = () => {
     resourceType: 'all'
   });
 
-  // Fetch with filters (re-runs when filters change)
+  // Fetch real data from CSV via your backend API
   const {
-    data: cpuRes,
-    loading: cpuLoading,
-    error: cpuError
-  } = useApi(
-    () => getCPUUsageTrends(filters.timeRange, regionLabelToApi(filters.region)),
-    [filters.timeRange, filters.region]
-  );
+    data: usageTrendsData,
+    loading: trendsLoading,
+    error: trendsError
+  } = useApiData(getUsageTrends);
 
   const {
-    data: storageRes,
+    data: storageData,
     loading: storageLoading,
     error: storageError
-  } = useApi(
-    () => getStorageUsage('all'),
-    [filters.timeRange] // tie to timeRange just to show reactivity
-  );
+  } = useApiData(getStorageByType);
 
   const {
-    data: demandRes,
-    loading: demandLoading,
-    error: demandError
-  } = useApi(
-    () => getDemandVariation(timeRangeToPeriod(filters.timeRange)),
-    [filters.timeRange]
-  );
+    data: dailyData,
+    loading: dailyLoading,
+    error: dailyError
+  } = useApiData(getDailyAverages);
+
+  const {
+    data: rawTableData,
+    loading: tableLoading,
+    error: tableError
+  } = useApiData(getRawData);
 
   const handleFilterChange = (updated) => setFilters(updated);
   const handleApplyFilters = (applied) => setFilters(applied);
@@ -74,8 +52,8 @@ const UsageTrends = () => {
   return (
     <div className="page-content">
       <div className="page-header">
-        <h3>📊 Usage Trends Dashboard</h3>
-        <p>Monitor CPU, storage, and resource usage patterns across Azure regions</p>
+        <h3>📊 Usage Trends Dashboard - Real CSV Data</h3>
+        <p>Monitor CPU, storage, and resource usage patterns from your Azure demand data</p>
       </div>
 
       <FilterPanel
@@ -86,59 +64,65 @@ const UsageTrends = () => {
 
       <div className="content-grid">
         <div className="content-card">
-          <h4>CPU Usage by Region</h4>
-          {cpuLoading ? (
-            <LoadingSpinner message="Loading CPU usage trends..." />
-          ) : cpuError ? (
-            <p style={{ color: 'red' }}>Error: {cpuError}</p>
+          <h4>CPU Usage Trends (Real Data)</h4>
+          {trendsLoading ? (
+            <LoadingSpinner message="Loading real CPU usage data..." />
+          ) : trendsError ? (
+            <p style={{ color: 'red' }}>Error loading real data: {trendsError}</p>
           ) : (
             <CPUTrendsChart
-              data={cpuRes?.data}
-              title={`CPU Usage Trends (${filters.timeRange.toUpperCase()})`}
+              data={usageTrendsData}
+              title="CPU Usage Trends from CSV Data"
             />
           )}
-          {cpuRes?.metadata?.lastUpdated && (
+          {usageTrendsData && (
             <p style={{ marginTop: '0.5rem', color: '#6c757d', fontSize: '0.85rem' }}>
-              Last updated: {new Date(cpuRes.metadata.lastUpdated).toLocaleString()}
+              📊 Showing real data from CSV file
             </p>
           )}
         </div>
 
         <div className="content-card">
-          <h4>Storage Consumption</h4>
+          <h4>Storage Usage by Type (Real Data)</h4>
           {storageLoading ? (
-            <LoadingSpinner message="Loading storage data..." />
+            <LoadingSpinner message="Loading real storage data..." />
           ) : storageError ? (
             <p style={{ color: 'red' }}>Error: {storageError}</p>
           ) : (
             <StorageChart
-              data={storageRes?.data}
-              title="Storage Usage by Type"
+              data={storageData}
+              title="Storage Usage from CSV Data"
             />
           )}
         </div>
 
         <div className="content-card">
-          <h4>Resource Utilization Distribution</h4>
-          {demandLoading ? (
-            <LoadingSpinner message="Loading demand distribution..." />
-          ) : demandError ? (
-            <p style={{ color: 'red' }}>Error: {demandError}</p>
+          <h4>Daily Averages Distribution (Real Data)</h4>
+          {dailyLoading ? (
+            <LoadingSpinner message="Loading daily averages..." />
+          ) : dailyError ? (
+            <p style={{ color: 'red' }}>Error: {dailyError}</p>
           ) : (
             <PieChart
-              // Reuse storageRes breakdown as a distribution example
-              data={storageRes?.data}
-              title="Storage Distribution by Type"
+              data={storageData} // Reusing storage data for pie chart
+              title="Resource Distribution from CSV"
             />
           )}
         </div>
       </div>
 
       <div style={{ marginTop: '1.5rem' }}>
-        <DataTable
-          data={usageReportData}
-          title="Regional Usage Summary"
-        />
+        <h4>📋 Raw CSV Data Table</h4>
+        {tableLoading ? (
+          <LoadingSpinner message="Loading table data..." />
+        ) : tableError ? (
+          <p style={{ color: 'red' }}>Error loading table: {tableError}</p>
+        ) : (
+          <DataTable
+            data={rawTableData ? rawTableData.slice(0, 50) : []} // Show first 50 rows
+            title={`Raw Data from CSV (${rawTableData ? rawTableData.length : 0} total records)`}
+          />
+        )}
       </div>
     </div>
   );
