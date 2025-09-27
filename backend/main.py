@@ -19,14 +19,16 @@ df = pd.read_csv(DATA_PATH, parse_dates=['date'])
 
 @app.get("/api/usage-trends")
 def usage_trends():
-    # Average CPU usage per region over time
+    # Filter out rows with null/empty regions
+    clean_df = df.dropna(subset=['region', 'usage_cpu'])
+    clean_df = clean_df[clean_df['region'].str.strip() != '']
+    
     trends = (
-        df.groupby(['date', 'region'])['usage_cpu']
+        clean_df.groupby(['date', 'region'])['usage_cpu']
         .mean()
         .reset_index()
         .sort_values(['date', 'region'])
     )
-    # Convert to list of dicts for JSON
     return trends.to_dict(orient='records')
 
 @app.get("/api/top-regions")
@@ -49,8 +51,11 @@ def raw_data():
 
 @app.get("/api/daily-averages")
 def daily_averages():
-    # Daily averages for all metrics
-    daily_avg = df.groupby('date').agg({
+    # Filter out rows with null/empty regions
+    clean_df = df.dropna(subset=['region', 'usage_cpu', 'usage_storage', 'users_active'])
+    clean_df = clean_df[clean_df['region'].str.strip() != '']
+    
+    daily_avg = clean_df.groupby(['date', 'region']).agg({
         'usage_cpu': 'mean',
         'usage_storage': 'mean',
         'users_active': 'mean'
@@ -59,9 +64,12 @@ def daily_averages():
 
 @app.get("/api/storage-by-type")
 def storage_by_type():
-    # Storage usage by resource type
+    # Filter out rows with null/empty resource_type
+    clean_df = df.dropna(subset=['resource_type', 'usage_storage'])
+    clean_df = clean_df[clean_df['resource_type'].str.strip() != '']
+    
     storage_by_type = (
-        df.groupby('resource_type')['usage_storage']
+        clean_df.groupby('resource_type')['usage_storage']
         .sum()
         .reset_index()
         .rename(columns={'usage_storage': 'total_storage'})
